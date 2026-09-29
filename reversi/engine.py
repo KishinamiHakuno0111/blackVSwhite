@@ -1,4 +1,4 @@
-"""Pure rules. Squares are row-major, A1=0 and J10=99; black moves first."""
+"""Pure 8x8 rules. Squares are row-major, A1=0 and H8=63; black moves first."""
 
 from dataclasses import dataclass
 import json
@@ -6,19 +6,21 @@ import os
 from pathlib import Path
 import tempfile
 
-SIZE = 10
+SIZE = 8
+CELLS = SIZE * SIZE
 BLACK, WHITE, EMPTY = 0, 1, 2
-ALL = (1 << (SIZE * SIZE)) - 1
+ALL = (1 << CELLS) - 1
 LEFT = sum(1 << (r * SIZE) for r in range(SIZE))
 RIGHT = LEFT << (SIZE - 1)
 TOP = (1 << SIZE) - 1
 BOTTOM = TOP << (SIZE * (SIZE - 1))
-CORNERS = (1 << 0) | (1 << 9) | (1 << 90) | (1 << 99)
+CORNERS = sum(1 << i for i in (0, SIZE - 1, CELLS - SIZE, CELLS - 1))
 EDGES = LEFT | RIGHT | TOP | BOTTOM
 # Each mask excludes source squares that would wrap across a row.
 DIRECTIONS = (
-    (1, ALL ^ RIGHT), (-1, ALL ^ LEFT), (10, ALL), (-10, ALL),
-    (11, ALL ^ RIGHT), (-11, ALL ^ LEFT), (9, ALL ^ LEFT), (-9, ALL ^ RIGHT),
+    (1, ALL ^ RIGHT), (-1, ALL ^ LEFT), (SIZE, ALL), (-SIZE, ALL),
+    (SIZE + 1, ALL ^ RIGHT), (-SIZE - 1, ALL ^ LEFT),
+    (SIZE - 1, ALL ^ LEFT), (1 - SIZE, ALL ^ RIGHT),
 )
 
 
@@ -90,14 +92,15 @@ def coordinate(move: int) -> str:
 
 
 def parse_coordinate(value: str) -> int:
-    if not isinstance(value, str) or len(value) not in (2, 3):
-        raise ValueError("落点应为 A1 到 J10")
+    error = f"落点应为 A1 到 {coordinate(CELLS - 1)}"
+    if not isinstance(value, str) or len(value) != 2:
+        raise ValueError(error)
     value = value.upper()
-    if value[0] not in "ABCDEFGHIJ" or not value[1:].isdigit():
-        raise ValueError("落点应为 A1 到 J10")
+    if not "A" <= value[0] <= chr(64 + SIZE) or value[1] not in "12345678":
+        raise ValueError(error)
     row = int(value[1:])
     if not 1 <= row <= SIZE:
-        raise ValueError("落点应为 A1 到 J10")
+        raise ValueError(error)
     return (row - 1) * SIZE + ord(value[0]) - 65
 
 
@@ -111,13 +114,15 @@ class Position:
         if type(self.black) is not int or type(self.white) is not int:
             raise ValueError("棋盘必须使用整数位图")
         if self.black < 0 or self.white < 0 or (self.black | self.white) & ~ALL:
-            raise ValueError("棋盘超出 10×10 范围")
+            raise ValueError(f"棋盘超出 {SIZE}×{SIZE} 范围")
         if self.black & self.white or type(self.turn) is not int or self.turn not in (BLACK, WHITE):
             raise ValueError("棋盘颜色或回合无效")
 
     @classmethod
     def initial(cls):
-        return cls((1 << 45) | (1 << 54), (1 << 44) | (1 << 55))
+        center = (SIZE // 2 - 1) * SIZE + SIZE // 2 - 1
+        return cls((1 << (center + 1)) | (1 << (center + SIZE)),
+                   (1 << center) | (1 << (center + SIZE + 1)))
 
     def pieces(self, color: int) -> int:
         if type(color) is not int or color not in (BLACK, WHITE):
@@ -130,14 +135,14 @@ class Position:
 
     @property
     def empty_count(self) -> int:
-        return 100 - (self.black | self.white).bit_count()
+        return CELLS - (self.black | self.white).bit_count()
 
     @property
     def counts(self) -> tuple[int, int]:
         return self.black.bit_count(), self.white.bit_count()
 
     def at(self, move: int) -> int:
-        if type(move) is not int or not 0 <= move < 100:
+        if type(move) is not int or not 0 <= move < CELLS:
             raise ValueError("落点超出棋盘")
         bit = 1 << move
         return BLACK if self.black & bit else WHITE if self.white & bit else EMPTY
@@ -219,11 +224,12 @@ class Game:
     def from_dict(cls, data):
         if not isinstance(data, dict) or data.get("format") != "black-white-chess":
             raise ValueError("这不是黑白棋存档")
-        if (type(data.get("version")) is not int or data["version"] != 1
-                or type(data.get("size")) is not int or data["size"] != SIZE):
-            raise ValueError("不支持此存档版本或棋盘尺寸")
+        if type(data.get("version")) is not int or data["version"] != 1:
+            raise ValueError("不支持此存档版本")
+        if type(data.get("size")) is not int or data["size"] != SIZE:
+            raise ValueError(f"本版本仅支持 {SIZE}×{SIZE} 存档，不能载入其他尺寸的棋谱")
         moves = data.get("moves")
-        if not isinstance(moves, list) or len(moves) > 96 or not isinstance(data.get("settings", {}), dict):
+        if not isinstance(moves, list) or len(moves) > CELLS - 4 or not isinstance(data.get("settings", {}), dict):
             raise ValueError("存档结构无效")
         game = cls()
         for i, value in enumerate(moves, 1):

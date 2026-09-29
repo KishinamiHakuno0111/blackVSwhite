@@ -1,12 +1,14 @@
-# 黑白棋 · Python 桌面版
+# 黑白棋 · 8×8 Python 桌面版
 
-从旧版 `Black and White Chess` C/C++ 实验项目迁移而来，统一为 **10×10 棋盘**。支持鼠标点击落子，使用 Python 标准库，无需安装第三方依赖。
+从旧版 `Black and White Chess` C/C++ 实验项目迁移而来，统一为 **8×8 棋盘**。支持鼠标点击落子，使用 Python 标准库，无需安装第三方依赖。
 
-![10×10 黑白棋界面](docs/images/game.png)
+![8×8 黑白棋界面](docs/images/game.png)
 
 ## 启动
 
-**直接运行版：** 从 [Releases 下载页面](https://github.com/KishinamiHakuno0111/blackVSwhite/releases/latest) 下载 `BlackWhiteChess.exe`，双击运行，无需安装 Python。面向 Windows 10/11 x64；本次在 Windows 10 x64 验证。源码仓库不包含 exe，本地构建结果保存在 `dist/`。分发和重新构建见 [DISTRIBUTION.md](DISTRIBUTION.md)。
+当前分支为 **`feature/8x8-board`**，提供标准 8×8 棋盘（A1–H8，64 格）；[main 分支](https://github.com/KishinamiHakuno0111/blackVSwhite/tree/main) 保留 10×10 版本。两个版本的存档不互通，错误尺寸的存档会被明确拒绝。
+
+**Windows 可执行文件：** 在本分支运行 `tools/build_windows.ps1`，生成 `dist/BlackWhiteChess-8x8.exe` 和相应压缩包，双击 exe 无需 Python。现有 `v1.0.0` Release 是 10×10 版，不能作为本分支的 8×8 下载文件。构建与分发见 [DISTRIBUTION.md](DISTRIBUTION.md)。
 
 **从源码运行：**
 
@@ -43,7 +45,7 @@ python main.py
 
 - **迭代加深 + Negamax / Alpha-Beta**，保留最后一轮完整搜索的落点；限时未完成时也保证返回合法候选。
 - **置换表、最佳落点排序、历史排序**，减少重复搜索。角位优先参与排序和评价，但不跳过搜索而强制抢角。
-- **阶段性局面评价**：位置权重、实际行动力、潜在行动力、角位、稳定子、前沿子、子数及残局空区奇偶性。
+- **阶段性局面评价**（按 64 格比例划分阶段）：位置权重、实际行动力、潜在行动力、角位、稳定子、前沿子、子数及残局空区奇偶性。
 - **稳定子**按所属棋手分别计算，从已占角位向外保守推导；不会采用“周围有子就是稳定子”的旧判断。
 - **空区奇偶性**按四邻接连通区域计算，在残局用于评价与搜索排序。它是启发式，最终胜负仍由实际终局子数决定。
 - **残局求解**：进入阈值后尝试搜索到终局；允许跳过回合，跳过不消耗落子深度；只有搜索完成才标为“终局已解”。
@@ -64,7 +66,7 @@ python main.py
 main.py                   桌面程序入口
 start_game.bat            Windows 双击启动
 reversi/
-  engine.py               10×10 规则、不可变局面、跳过回合、历史与存档
+  engine.py               8×8 规则、不可变局面、跳过回合、历史与存档
   ai.py                   搜索、评价、稳定子、奇偶性、模拟、贪心基线
   worker.py               AI 子进程与取消
   ui.py                   Tkinter 棋盘和对局交互
@@ -78,7 +80,7 @@ audit_*.py                旧项目检查脚本，不属于游戏运行依赖
 
 旧 C/C++ 项目没有随本仓库发布，本项目运行时不读取或依赖它。
 
-`PROJECT_STATUS.md` 是迁移前的历史审计报告，描述的是旧版缺陷；当前 Python 版的修复情况见 `MIGRATION_NOTES.md`。`audit_*.py` 仅供复查旧项目，运行前需要自行提供原始源码并设置 `BLACK_WHITE_LEGACY_ROOT` 环境变量；还需要报告所述的 MSVC 工具链。审计原始产物仅保留在作者本地，不属于仓库内容。
+当前 8×8 版的适配和验证见 [8×8 分支说明](docs/EIGHT_BY_EIGHT.md)。`PROJECT_STATUS.md` 是旧 C/C++ 历史审计报告；`MIGRATION_NOTES.md` 保留 10×10 初版的修复记录。`audit_*.py` 仅供复查旧项目，运行前需要自行提供原始源码并设置 `BLACK_WHITE_LEGACY_ROOT` 环境变量；还需要报告所述的 MSVC 工具链。审计原始产物仅保留在作者本地，不属于仓库内容。
 
 ## 验证与对战评估
 
@@ -100,7 +102,7 @@ python -m unittest tests.test_engine tests.test_ai -v
 python -m reversi.benchmark --games 6 --seconds 0.08 --output artifacts/benchmark.json
 ```
 
-本次验证：**32 项测试通过**。30 局随机对局逐步对照独立数组规则，5 个六空位残局对照独立穷举，另含强制跳过、稳定子、保存载入、鼠标/键盘落子、实际 AI 回应、撤回与取消等测试。配对开局、换色的 6 局基线测试取得 **6 胜 0 平 0 负**；样本较小，限时搜索结果也可能随机器性能有所变化。
+8×8 分支验证：**36 项测试通过**。30 局随机对局逐步对照独立数组规则，5 个六空位残局对照独立穷举，另含强制跳过、稳定子、保存载入、鼠标/键盘落子、实际 AI 回应、撤回与取消等测试。配对开局、换色的对抗评估结果见 `docs/validation/benchmark-8x8.json`；样本较小，限时搜索结果也可能随机器性能有所变化。
 
 截图和本机评估原始结果保存在 `artifacts/`。复现界面截图：
 

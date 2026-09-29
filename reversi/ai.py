@@ -10,26 +10,28 @@ import random
 from time import perf_counter
 from typing import Callable
 
-from .engine import (ALL, BOTTOM, CORNERS, DIRECTIONS, EDGES, LEFT, RIGHT, TOP,
+from .engine import (ALL, BOTTOM, CELLS, CORNERS, DIRECTIONS, EDGES, LEFT, RIGHT, SIZE, TOP,
                      Position, flipped_bits, legal_bits, neighbors, shift, squares)
 
 WIN = 100_000
 INF = 1_000_000
 EXACT, LOWER, UPPER = 0, 1, 2
 WEIGHTS = (
-    100, -25, 12, 6, 5, 5, 6, 12, -25, 100,
-    -25, -45, -2, -2, -2, -2, -2, -2, -45, -25,
-    12, -2, 4, 2, 2, 2, 2, 4, -2, 12,
-    6, -2, 2, 1, 1, 1, 1, 2, -2, 6,
-    5, -2, 2, 1, 1, 1, 1, 2, -2, 5,
-    5, -2, 2, 1, 1, 1, 1, 2, -2, 5,
-    6, -2, 2, 1, 1, 1, 1, 2, -2, 6,
-    12, -2, 4, 2, 2, 2, 2, 4, -2, 12,
-    -25, -45, -2, -2, -2, -2, -2, -2, -45, -25,
-    100, -25, 12, 6, 5, 5, 6, 12, -25, 100,
+    100, -25, 12, 6, 6, 12, -25, 100,
+    -25, -45, -2, -2, -2, -2, -45, -25,
+    12, -2, 4, 2, 2, 4, -2, 12,
+    6, -2, 2, 1, 1, 2, -2, 6,
+    6, -2, 2, 1, 1, 2, -2, 6,
+    12, -2, 4, 2, 2, 4, -2, 12,
+    -25, -45, -2, -2, -2, -2, -45, -25,
+    100, -25, 12, 6, 6, 12, -25, 100,
 )
-CORNER_AREAS = ((0, (1, 10, 11)), (9, (8, 19, 18)),
-                (90, (80, 91, 81)), (99, (89, 98, 88)))
+CORNER_AREAS = (
+    (0, (1, SIZE, SIZE + 1)),
+    (SIZE - 1, (SIZE - 2, 2 * SIZE - 1, 2 * SIZE - 2)),
+    (CELLS - SIZE, (CELLS - 2 * SIZE, CELLS - SIZE + 1, CELLS - 2 * SIZE + 1)),
+    (CELLS - 1, (CELLS - SIZE - 1, CELLS - 2, CELLS - SIZE - 2)),
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,7 +46,7 @@ class SearchConfig:
     def __post_init__(self):
         if not isfinite(self.time_limit) or self.time_limit < 0:
             raise ValueError("搜索时间必须是非负有限数")
-        if not 1 <= self.max_depth <= 100 or not 0 <= self.exact_empty <= 20:
+        if not 1 <= self.max_depth <= CELLS or not 0 <= self.exact_empty <= 20:
             raise ValueError("搜索深度配置无效")
         if not 0 <= self.rollout_samples <= 100 or self.table_limit < 1:
             raise ValueError("搜索配置无效")
@@ -136,7 +138,7 @@ def evaluation_features(own: int, other: int, own_moves: int | None = None) -> d
     other_moves = legal_bits(other, own)
     bordering_empty = neighbors(empty)
     parity = 0
-    if empty.bit_count() <= 20:
+    if empty.bit_count() <= CELLS // 5:
         for region in empty_regions(empty):
             if region.bit_count() % 2:
                 # Contested regions contribute symmetrically. This is a heuristic,
@@ -156,9 +158,9 @@ def evaluation_features(own: int, other: int, own_moves: int | None = None) -> d
 
 def evaluate(own: int, other: int, own_moves: int | None = None) -> int:
     features = evaluation_features(own, other, own_moves)
-    empty = 100 - (own | other).bit_count()
-    disc_weight = -1 if empty > 60 else 1 if empty > 20 else 8
-    mobility_weight = 14 if empty > 20 else 9
+    empty = CELLS - (own | other).bit_count()
+    disc_weight = -1 if empty * 5 > CELLS * 3 else 1 if empty * 5 > CELLS else 8
+    mobility_weight = 14 if empty * 5 > CELLS else 9
     return (features["position"] * 2 + features["mobility"] * mobility_weight
             + features["potential"] * 3 + features["corners"] * 160
             + features["stable"] * 24 - features["frontier"] * 7
@@ -178,7 +180,7 @@ class Searcher:
     def __init__(self, config: SearchConfig = SearchConfig()):
         self.config = config
         self.table: dict[tuple[int, int], Entry] = {}
-        self.history = [0] * 100
+        self.history = [0] * CELLS
         self.nodes = 0
         self.tt_hits = 0
         self.rollouts = 0
@@ -323,7 +325,7 @@ class Searcher:
         start = perf_counter()
         self.deadline = start + self.config.time_limit
         self.table.clear()
-        self.history = [0] * 100
+        self.history = [0] * CELLS
         self.nodes = self.tt_hits = self.rollouts = 0
         self.rollout_order = {}
         own, other = position.pieces(position.turn), position.pieces(1 - position.turn)

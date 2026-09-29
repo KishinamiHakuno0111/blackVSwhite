@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "frozen": true,
+  "python": "3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]",
+  "size": 8,
+  "checks": [
+    "Tk window and 8x8 board created",
+    "Mouse click placed a legal move",
+    "Real AI subprocess replied and returned control",
+    "AI hint is legal and leaves the board unchanged",
+    "Undo restored initial board",
+    "Saved game restored successfully",
+    "AI opens when the human plays white",
+    "Complete two-player game reaches a displayed result"
+  ],
+  "exit_code": 0,
+  "executable": "BlackWhiteChess-8x8.exe",
+  "environment": "Windows 10 x64; isolated directory with Chinese characters and spaces; Python paths removed"
+}

@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 from .ai import LEVELS, WIN
-from .engine import BLACK, WHITE, EMPTY, SIZE, Game, coordinate, flipped_bits, squares
+from .engine import BLACK, WHITE, EMPTY, SIZE, CELLS, Game, coordinate, flipped_bits, squares
 from .worker import SearchWorker
 
 COLORS = {
@@ -31,7 +31,7 @@ class BoardCanvas(tk.Canvas):
         self.enabled = True
         self.show_legal = True
         self.last_move = self.hint = self.hover = None
-        self.keyboard_square = 44
+        self.keyboard_square = (SIZE // 2 - 1) * SIZE + SIZE // 2 - 1
         self.keyboard_visible = False
         self.origin = (0.0, 0.0)
         self.cell = 1.0
@@ -55,9 +55,9 @@ class BoardCanvas(tk.Canvas):
 
     def square_at(self, x, y):
         left, top = self.origin
-        if not left <= x < left + 10 * self.cell or not top <= y < top + 10 * self.cell:
+        if not left <= x < left + SIZE * self.cell or not top <= y < top + SIZE * self.cell:
             return None
-        return int((y - top) // self.cell) * 10 + int((x - left) // self.cell)
+        return int((y - top) // self.cell) * SIZE + int((x - left) // self.cell)
 
     def _click(self, event):
         self.focus_set()
@@ -88,18 +88,18 @@ class BoardCanvas(tk.Canvas):
         self.draw()
 
     def _key(self, event):
-        row, col = divmod(self.keyboard_square, 10)
+        row, col = divmod(self.keyboard_square, SIZE)
         if event.keysym == "Left":
             col = max(0, col - 1)
         elif event.keysym == "Right":
-            col = min(9, col + 1)
+            col = min(SIZE - 1, col + 1)
         elif event.keysym == "Up":
             row = max(0, row - 1)
         elif event.keysym == "Down":
-            row = min(9, row + 1)
+            row = min(SIZE - 1, row + 1)
         elif self.enabled:
             self.on_move(self.keyboard_square)
-        self.keyboard_square = row * 10 + col
+        self.keyboard_square = row * SIZE + col
         self.keyboard_visible = True
         self.on_hover(self.keyboard_square)
         self.draw()
@@ -111,20 +111,20 @@ class BoardCanvas(tk.Canvas):
             return
         width, height = self.winfo_width(), self.winfo_height()
         size = max(100, min(width - 62, height - 56))
-        self.cell = size / 10
+        self.cell = size / SIZE
         self.origin = ((width - size) / 2, (height - size) / 2 + 2)
         left, top = self.origin
         legal = self.position.legal()
         self.create_rectangle(left - 5, top - 5, left + size + 5, top + size + 5,
                               fill=COLORS["ink"], outline="")
-        for i in range(10):
+        for i in range(SIZE):
             self.create_text(left + (i + .5) * self.cell, top - 21, text=chr(65 + i),
                              font=(FONT, 10), fill=COLORS["muted"])
             self.create_text(left - 22, top + (i + .5) * self.cell, text=str(i + 1),
                              font=(FONT, 10), fill=COLORS["muted"])
         radius = self.cell * .375
-        for move in range(100):
-            row, col = divmod(move, 10)
+        for move in range(CELLS):
+            row, col = divmod(move, SIZE)
             x, y = self.center(move)
             half = self.cell / 2
             self.create_rectangle(x - half, y - half, x + half, y + half,
@@ -165,7 +165,7 @@ class BoardCanvas(tk.Canvas):
 class ChessApp:
     def __init__(self, root: tk.Tk, worker=None):
         self.root = root
-        self.root.title("黑白棋 · 10×10")
+        self.root.title("黑白棋 · 8×8")
         self.root.geometry("1180x850")
         self.root.minsize(1000, 780)
         self.root.configure(background=COLORS["background"])
@@ -232,7 +232,7 @@ class ChessApp:
         identity = ttk.Frame(header)
         identity.pack(side="left")
         self._label(identity, "黑白棋", font=(FONT, 26, "bold")).pack(anchor="w")
-        self._label(identity, "10 × 10   /   每一步，改变局面", foreground=COLORS["muted"]).pack(anchor="w", pady=(3, 0))
+        self._label(identity, "8 × 8   /   每一步，改变局面", foreground=COLORS["muted"]).pack(anchor="w", pady=(3, 0))
         for title, command in reversed((("保存对局", self.save_game), ("载入对局", self.load_game), ("规则", self.show_rules))):
             ttk.Button(header, text=title, command=command).pack(side="right", padx=(8, 0))
 
@@ -558,7 +558,7 @@ class ChessApp:
 
     def save_game(self):
         path = filedialog.asksaveasfilename(parent=self.root, title="保存对局", defaultextension=".json",
-                                          initialfile="黑白棋对局.json", filetypes=[("黑白棋存档", "*.json")])
+                                          initialfile="黑白棋8x8对局.json", filetypes=[("黑白棋存档", "*.json")])
         if path:
             try:
                 self.game.save(path, {"mode": self.mode, "human_color": self.human_color, "level": self.level})
@@ -597,7 +597,7 @@ class ChessApp:
                 messagebox.showerror("载入失败", str(exc), parent=self.root)
 
     def show_rules(self):
-        messagebox.showinfo("10×10 黑白棋规则",
+        messagebox.showinfo("8×8 黑白棋规则",
                             "黑棋先行，双方轮流落子。\n\n"
                             "落下的棋子必须在横、竖或斜线方向，与已有己方棋子夹住连续的对方棋子；"
                             "被夹住的棋子全部翻为己方颜色。\n\n"

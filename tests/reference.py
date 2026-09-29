@@ -5,16 +5,16 @@ import random
 
 
 def initial():
-    board = [2] * 100
-    board[44] = board[55] = 1
-    board[45] = board[54] = 0
+    board = [2] * 64
+    board[27] = board[36] = 1
+    board[28] = board[35] = 0
     return tuple(board)
 
 
 def flips(board, player, move):
-    if not 0 <= move < 100 or board[move] != 2:
+    if not 0 <= move < 64 or board[move] != 2:
         return ()
-    row, col = divmod(move, 10)
+    row, col = divmod(move, 8)
     captured = []
     for dr in (-1, 0, 1):
         for dc in (-1, 0, 1):
@@ -22,16 +22,16 @@ def flips(board, player, move):
                 continue
             r, c = row + dr, col + dc
             ray = []
-            while 0 <= r < 10 and 0 <= c < 10 and board[r * 10 + c] == 1 - player:
-                ray.append(r * 10 + c)
+            while 0 <= r < 8 and 0 <= c < 8 and board[r * 8 + c] == 1 - player:
+                ray.append(r * 8 + c)
                 r, c = r + dr, c + dc
-            if ray and 0 <= r < 10 and 0 <= c < 10 and board[r * 10 + c] == player:
+            if ray and 0 <= r < 8 and 0 <= c < 8 and board[r * 8 + c] == player:
                 captured += ray
     return tuple(captured)
 
 
 def legal(board, player):
-    return tuple(i for i in range(100) if flips(board, player, i))
+    return tuple(i for i in range(64) if flips(board, player, i))
 
 
 def play(board, player, move):

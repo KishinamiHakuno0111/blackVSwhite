@@ -7,7 +7,7 @@ import random
 from time import perf_counter
 
 from .ai import SearchConfig, choose_move, greedy_move
-from .engine import Game, squares
+from .engine import SIZE, Game, squares
 
 
 def run(games=6, seconds=.08, seed=2026):
@@ -44,7 +44,7 @@ def run(games=6, seconds=.08, seed=2026):
                "mean_depth": round(sum(depths) / len(depths), 2)}
         results.append(row)
         print(json.dumps(row, ensure_ascii=False), flush=True)
-    summary = {"games": games, "seconds_per_move": seconds, "seed": seed,
+    summary = {"size": SIZE, "games": games, "seconds_per_move": seconds, "seed": seed,
                "opponent": "maximum immediate flips", "random_opening_plies": 4,
                "paired_openings_color_swap": True, "elapsed": round(perf_counter() - start, 3),
                "wins": sum(r["outcome"] == "win" for r in results),

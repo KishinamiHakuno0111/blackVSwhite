@@ -10,21 +10,36 @@ from . import reference as ref
 
 
 class RulesTests(unittest.TestCase):
+    def test_eight_by_eight_limits_and_old_save_rejection(self):
+        self.assertEqual(ALL, (1 << 64) - 1)
+        self.assertEqual(coordinate(63), "H8")
+        self.assertEqual(parse_coordinate("h8"), 63)
+        for move in (64, 99):
+            with self.assertRaises(ValueError):
+                Position.initial().at(move)
+            with self.assertRaises(ValueError):
+                coordinate(move)
+        game = Game()
+        self.assertEqual(game.to_dict()["size"], 8)
+        for moves in ([], ["E4"]):
+            with self.assertRaisesRegex(ValueError, "仅支持 8×8"):
+                Game.from_dict({**game.to_dict(), "size": 10, "moves": moves})
+
     def test_initial_and_coordinates(self):
         position = Position.initial()
         self.assertEqual(position.counts, (2, 2))
-        self.assertEqual(position.empty_count, 96)
-        self.assertEqual({coordinate(i) for i in squares(position.legal())}, {"E4", "D5", "G6", "F7"})
-        for i in range(100):
+        self.assertEqual(position.empty_count, 60)
+        self.assertEqual({coordinate(i) for i in squares(position.legal())}, {"D3", "C4", "F5", "E6"})
+        for i in range(64):
             self.assertEqual(parse_coordinate(coordinate(i).lower()), i)
-        for value in ("A0", "K1", "A11", "A100", "11", "", None):
+        for value in ("A0", "I1", "J10", "H9", "A9", "A01", "A100", "11", "", None):
             with self.assertRaises(ValueError):
                 parse_coordinate(value)
 
     def test_illegal_moves_do_not_mutate_state(self):
         game = Game()
         initial = game.position
-        for move in (-1, 100, 1000000, 0, 44, True, "E4"):
+        for move in (-1, 64, 1000000, 0, 27, True, "D3"):
             with self.assertRaises(ValueError):
                 game.play(move)
             self.assertEqual(game.position, initial)
@@ -35,23 +50,23 @@ class RulesTests(unittest.TestCase):
             _ = initial.winner
 
     def test_eight_direction_flip(self):
-        board = [2] * 100
+        board = [2] * 64
         for dr in (-1, 0, 1):
             for dc in (-1, 0, 1):
                 if dr or dc:
-                    board[(4 + dr) * 10 + 4 + dc] = WHITE
-                    board[(4 + 2 * dr) * 10 + 4 + 2 * dc] = BLACK
+                    board[(3 + dr) * 8 + 3 + dc] = WHITE
+                    board[(3 + 2 * dr) * 8 + 3 + 2 * dc] = BLACK
         position = Position(*ref.bitboards(board))
-        self.assertEqual(flipped_bits(position.black, position.white, 44).bit_count(), 8)
-        self.assertEqual(position.play(44).counts, (17, 0))
+        self.assertEqual(flipped_bits(position.black, position.white, 27).bit_count(), 8)
+        self.assertEqual(position.play(27).counts, (17, 0))
 
     def test_no_horizontal_or_diagonal_wrap(self):
-        # A naive integer shift would mistake J1, A2, B2 for a horizontal ray.
-        position = Position(1 << 9, 1 << 10)
-        self.assertFalse(position.legal() & (1 << 11))
-        for own, other in ((1 << 9, 1 << 20), (1 << 90, 1 << 79)):
+        # A naive integer shift would mistake H1, A2, B2 for a horizontal ray.
+        position = Position(1 << 7, 1 << 8)
+        self.assertFalse(position.legal() & (1 << 9))
+        for own, other in ((1 << 7, 1 << 16), (1 << 56, 1 << 47)):
             position = Position(own, other)
-            board = tuple(position.at(i) for i in range(100))
+            board = tuple(position.at(i) for i in range(64))
             self.assertEqual(set(squares(position.legal())), set(ref.legal(board, BLACK)))
 
     def test_random_complete_games_against_array_oracle(self):
@@ -78,19 +93,20 @@ class RulesTests(unittest.TestCase):
             b, w = board.count(BLACK), board.count(WHITE)
             self.assertEqual(position.counts, (b, w))
             self.assertEqual(position.winner, BLACK if b > w else WHITE if w > b else None)
-        self.assertGreater(checked_moves, 2800)
+        self.assertGreater(checked_moves, 1700)
         self.assertGreater(forced_passes, 60)
 
     def test_terminal_with_empty_squares_and_draw(self):
         position = Position(1, 0)
         self.assertTrue(position.is_over)
         self.assertEqual(position.winner, BLACK)
-        self.assertEqual(position.empty_count, 99)
-        self.assertIsNone(Position(1, 1 << 99).winner)
+        self.assertEqual(position.empty_count, 63)
+        self.assertIsNone(Position(1, 1 << 63).winner)
 
     def test_pass_history_undo_and_roundtrip(self):
         game = Game()
-        rng = random.Random(12)
+        # Seed 2 reaches a forced pass on the independent 8x8 reference board.
+        rng = random.Random(2)
         skip_seen = False
         while not game.position.is_over:
             before = game.position
@@ -112,7 +128,7 @@ class RulesTests(unittest.TestCase):
 
     def test_validated_atomic_save(self):
         game = Game()
-        game.play(34)
+        game.play(19)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "棋局.json"
             game.save(path, {"mode": "人机对战"})
@@ -126,7 +142,7 @@ class RulesTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "第 1 步"):
                 Game.load(path)
         for data in ({}, [], {"format": "black-white-chess", "version": 5},
-                     {**game.to_dict(), "moves": ["E4"] * 97}):
+                     {**game.to_dict(), "moves": ["D3"] * 61}):
             with self.assertRaises(ValueError):
                 Game.from_dict(data)
 

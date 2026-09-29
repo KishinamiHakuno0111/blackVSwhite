@@ -9,9 +9,9 @@ import subprocess
 
 def main():
     project = Path(__file__).resolve().parents[1]
-    isolated = project / "artifacts" / "standalone" / "中文路径 空格"
+    isolated = project / "artifacts" / "standalone-8x8" / "中文路径 空格"
     isolated.mkdir(parents=True, exist_ok=True)
-    executable = isolated / "BlackWhiteChess.exe"
+    executable = isolated / "BlackWhiteChess-8x8.exe"
     shutil.copy2(project / "dist" / executable.name, executable)
     report = isolated / "smoke-report.json"
     if report.exists():
@@ -30,7 +30,7 @@ def main():
     result["isolated_directory"] = str(isolated)
     result["test_path"] = env["PATH"]
     result["exit_code"] = completed.returncode
-    output = project / "artifacts" / "packaging-verification.json"
+    output = project / "artifacts" / "packaging-verification-8x8.json"
     output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(result, ensure_ascii=False, indent=2))
     if completed.returncode != 0 or not result["ok"] or not result["frozen"]:

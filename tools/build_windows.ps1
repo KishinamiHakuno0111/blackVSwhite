@@ -17,10 +17,10 @@ try {
     $tclData = (Join-Path $projectRoot "build\tk\_tcl_data") + ":_tcl_data"
     $tkData = (Join-Path $projectRoot "build\tk\_tk_data") + ":_tk_data"
     $licenseData = (Join-Path $projectRoot "build\licenses") + ":licenses"
-    & $buildPython -m PyInstaller --noconfirm --clean --onefile --windowed --noupx --name BlackWhiteChess --add-data $tclData --add-data $tkData --add-data $licenseData --distpath dist --workpath build/pyinstaller --specpath build main.py
+    & $buildPython -m PyInstaller --noconfirm --clean --onefile --windowed --noupx --name BlackWhiteChess-8x8 --add-data $tclData --add-data $tkData --add-data $licenseData --distpath dist --workpath build/pyinstaller --specpath build main.py
     if ($LASTEXITCODE -ne 0) { throw "Packaging failed" }
-    Compress-Archive -LiteralPath @("dist\BlackWhiteChess.exe", "DISTRIBUTION.md", "LICENSE", "build\licenses") -DestinationPath "dist\BlackWhiteChess-Windows-x64.zip" -Force
-    Write-Host "Ready: $projectRoot\dist\BlackWhiteChess.exe"
+    Compress-Archive -LiteralPath @("dist\BlackWhiteChess-8x8.exe", "DISTRIBUTION.md", "LICENSE", "build\licenses") -DestinationPath "dist\BlackWhiteChess-8x8-Windows-x64.zip" -Force
+    Write-Host "Ready: $projectRoot\dist\BlackWhiteChess-8x8.exe"
 } finally {
     $env:PYINSTALLER_CONFIG_DIR = $previousCache
     Pop-Location

@@ -1,0 +1,81 @@
+{
+  "size": 8,
+  "games": 6,
+  "seconds_per_move": 0.08,
+  "seed": 2026,
+  "opponent": "maximum immediate flips",
+  "random_opening_plies": 4,
+  "paired_openings_color_swap": true,
+  "elapsed": 12.352,
+  "wins": 6,
+  "draws": 0,
+  "losses": 0,
+  "results": [
+    {
+      "game": 1,
+      "seed": 2026,
+      "ai_color": 0,
+      "black": 62,
+      "white": 2,
+      "outcome": "win",
+      "moves": 60,
+      "ai_seconds": 2.345,
+      "mean_depth": 4.24
+    },
+    {
+      "game": 2,
+      "seed": 2026,
+      "ai_color": 1,
+      "black": 3,
+      "white": 61,
+      "outcome": "win",
+      "moves": 60,
+      "ai_seconds": 2.15,
+      "mean_depth": 4.37
+    },
+    {
+      "game": 3,
+      "seed": 2027,
+      "ai_color": 0,
+      "black": 64,
+      "white": 0,
+      "outcome": "win",
+      "moves": 60,
+      "ai_seconds": 2.196,
+      "mean_depth": 4.5
+    },
+    {
+      "game": 4,
+      "seed": 2027,
+      "ai_color": 1,
+      "black": 0,
+      "white": 37,
+      "outcome": "win",
+      "moves": 33,
+      "ai_seconds": 1.422,
+      "mean_depth": 4.94
+    },
+    {
+      "game": 5,
+      "seed": 2028,
+      "ai_color": 0,
+      "black": 56,
+      "white": 8,
+      "outcome": "win",
+      "moves": 60,
+      "ai_seconds": 2.07,
+      "mean_depth": 4.34
+    },
+    {
+      "game": 6,
+      "seed": 2028,
+      "ai_color": 1,
+      "black": 18,
+      "white": 46,
+      "outcome": "win",
+      "moves": 60,
+      "ai_seconds": 2.141,
+      "mean_depth": 4.24
+    }
+  ]
+}

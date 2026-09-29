@@ -14,7 +14,7 @@ class AITests(unittest.TestCase):
         self.assertEqual(stable_bits(0), 0)
         self.assertEqual(stable_bits(Position.initial().black), 0)
         features = evaluation_features(ALL, 0)
-        self.assertEqual(features["stable"], 100)
+        self.assertEqual(features["stable"], 64)
 
     def test_proven_stable_discs_never_flip(self):
         for seed in range(12):
@@ -29,12 +29,12 @@ class AITests(unittest.TestCase):
                 self.assertEqual(white_stable & after.white, white_stable)
 
     def test_regions_use_four_neighbors_and_preserve_all_cells(self):
-        self.assertEqual(len(empty_regions((1 << 0) | (1 << 11))), 2)
-        empty = (1 << 0) | (1 << 1) | (1 << 10) | (1 << 99)
+        self.assertEqual(len(empty_regions((1 << 0) | (1 << 9))), 2)
+        empty = (1 << 0) | (1 << 1) | (1 << 8) | (1 << 63)
         regions = empty_regions(empty)
         self.assertEqual(sorted(r.bit_count() for r in regions), [1, 3])
         self.assertEqual(sum(regions), empty)
-        self.assertEqual(len(empty_regions((1 << 9) | (1 << 10))), 2)
+        self.assertEqual(len(empty_regions((1 << 7) | (1 << 8))), 2)
 
     def test_evaluation_sign_and_board_symmetry(self):
         for seed in range(4):
@@ -44,6 +44,16 @@ class AITests(unittest.TestCase):
             rotated = tuple(reversed(board))
             a, b = ref.bitboards(rotated)
             self.assertEqual(evaluate(own, other), evaluate(a, b))
+
+    def test_evaluation_matches_all_rotations_and_reflections(self):
+        # All eight symmetries must preserve evaluation, including corner penalties.
+        board, _ = ref.ending(15, 20)
+        expected = evaluate(*ref.bitboards(board))
+        for _ in range(4):
+            reflected = tuple(board[row * 8 + 7 - col] for row in range(8) for col in range(8))
+            self.assertEqual(evaluate(*ref.bitboards(board)), expected)
+            self.assertEqual(evaluate(*ref.bitboards(reflected)), expected)
+            board = tuple(board[(7 - col) * 8 + row] for row in range(8) for col in range(8))
 
     def test_time_zero_returns_legal_fallback(self):
         position = Position.initial()
@@ -94,7 +104,7 @@ class AITests(unittest.TestCase):
         self.assertFalse(position.legal())
         self.assertTrue(position.legal(1))
         searcher.deadline = perf_counter() + 2
-        self.assertEqual(searcher._search(position.black, position.white, 1, -1_000_000, 1_000_000), -WIN - 10000)
+        self.assertEqual(searcher._search(position.black, position.white, 1, -1_000_000, 1_000_000), -WIN - 6400)
         self.assertIsNone(choose_move(position).move)
         self.assertFalse(choose_move(position).solved)
 

@@ -1,6 +1,7 @@
 """Exercise real Tk widgets without opening dialogs or relying on screen coordinates."""
 
 from pathlib import Path
+import json
 import random
 import tempfile
 import time
@@ -62,11 +63,11 @@ class UITests(unittest.TestCase):
 
     def test_canvas_click_and_keyboard_move(self):
         self.set_mode(MODES[1])
-        x, y = self.app.board.center(34)
+        x, y = self.app.board.center(19)
         self.app.board.event_generate("<Button-1>", x=int(x), y=int(y))
         self.root.update()
         self.assertEqual(len(self.app.game.history), 1)
-        self.assertEqual(self.app.game.history[-1].move, 34)
+        self.assertEqual(self.app.game.history[-1].move, 19)
         next_move = next(squares(self.app.game.position.legal()))
         self.app.board.keyboard_square = next_move
         self.app.board.focus_force()
@@ -81,10 +82,41 @@ class UITests(unittest.TestCase):
         self.assertEqual(self.app.game.position, original)
         self.assertIn("不能落子", self.app.status_var.get())
         self.assertIsNone(self.app.board.square_at(0, 0))
-        self.assertEqual(self.app.board.square_at(*self.app.board.center(99)), 99)
+        self.assertEqual(self.app.board.square_at(*self.app.board.center(63)), 63)
+
+    def test_eight_by_eight_grid_and_keyboard_edges(self):
+        board = self.app.board
+        self.assertIn("8×8", self.root.title())
+        for move in range(64):
+            self.assertEqual(board.square_at(*board.center(move)), move)
+        left, top = board.origin
+        self.assertIsNone(board.square_at(left + 8 * board.cell, top))
+        self.assertIsNone(board.square_at(left, top + 8 * board.cell))
+        board.focus_force()
+        self.root.update()
+        for move, keys in ((0, ("Left", "Up")), (63, ("Right", "Down"))):
+            board.keyboard_square = move
+            for key in keys:
+                board.event_generate(f"<{key}>")
+                self.root.update()
+                self.assertEqual(board.keyboard_square, move)
+
+    def test_ten_by_ten_save_cannot_replace_active_game(self):
+        self.set_mode(MODES[1])
+        self.app.play_move(19)
+        original = self.app.game.position
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "old-10x10.json"
+            payload = {"format": "black-white-chess", "version": 1,
+                       "size": 10, "moves": [], "settings": {}}
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "仅支持 8×8"):
+                self.app.restore(path)
+        self.assertEqual(self.app.game.position, original)
+        self.assertEqual(len(self.app.game.history), 1)
 
     def test_human_ai_reply_and_round_undo(self):
-        self.app.play_move(34)
+        self.app.play_move(19)
         self.app._cancel_search()
         self.app._begin_ai()
         self.assertTrue(self.app.busy)
@@ -99,7 +131,7 @@ class UITests(unittest.TestCase):
         self.assertFalse(self.app.busy)
 
     def test_undo_during_search_cancels_pending_result(self):
-        self.app.play_move(34)
+        self.app.play_move(19)
         self.app._cancel_search()
         self.app._begin_ai()
         self.worker.finish()
@@ -109,7 +141,7 @@ class UITests(unittest.TestCase):
         self.assertFalse(self.app.busy)
 
     def test_new_game_invalidates_old_result(self):
-        self.app.play_move(34)
+        self.app.play_move(19)
         self.app._cancel_search()
         self.app._begin_ai()
         self.worker.finish()
@@ -141,7 +173,7 @@ class UITests(unittest.TestCase):
         self.assertIsNotNone(self.app.next_ai_id)
 
     def test_restore_validates_before_replacing_game(self):
-        self.app.play_move(34)
+        self.app.play_move(19)
         before = self.app.game.position
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "game.json"
@@ -197,7 +229,7 @@ class WorkerTests(unittest.TestCase):
                 time.sleep(.02)
             self.assertIsNotNone(result)
             self.assertIn(result.move, tuple(squares(Position.initial().legal())))
-            worker.start(Position.initial(), SearchConfig(10, 100, 0, 0))
+            worker.start(Position.initial(), SearchConfig(10, 64, 0, 0))
             worker.cancel()
             self.assertFalse(worker.alive)
             self.assertEqual(worker.messages(), [])
@@ -225,7 +257,7 @@ class LiveUITests(unittest.TestCase):
                 time.sleep(.01)
             self.assertTrue(predicate(), app.stats_var.get())
         try:
-            app.play_move(34)
+            app.play_move(19)
             wait_until(lambda: len(app.game.history) == 2)
             self.assertGreater(len(pulses), 10, "Tk must remain responsive during AI search")
             self.assertTrue(app._is_human())

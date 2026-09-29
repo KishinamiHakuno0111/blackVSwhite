@@ -14,7 +14,7 @@ def run(report_path):
     app = None
     try:
         import tkinter as tk
-        from .engine import Position, squares
+        from .engine import SIZE, Position, squares
         from .ui import ChessApp, MODES
 
         root = tk.Tk()
@@ -22,7 +22,10 @@ def run(report_path):
         app.level_var.set("快速")
         app.new_game()
         root.update()
-        report["checks"].append("Tk window and 10x10 board created")
+        if SIZE != 8 or app.game.position.empty_count != 60 or "8×8" not in root.title():
+            raise AssertionError("Expected the 8x8 edition")
+        report["size"] = SIZE
+        report["checks"].append("Tk window and 8x8 board created")
 
         def check(condition, message):
             if not condition:
@@ -37,7 +40,7 @@ def run(report_path):
             if not predicate():
                 raise AssertionError("AI did not finish: " + app.stats_var.get())
 
-        x, y = app.board.center(34)
+        x, y = app.board.center(19)
         app.board.event_generate("<Button-1>", x=int(x), y=int(y))
         check(len(app.game.history) == 1, "Mouse click placed a legal move")
         wait_until(lambda: len(app.game.history) == 2)
